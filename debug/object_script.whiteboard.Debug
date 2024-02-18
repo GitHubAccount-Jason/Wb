@@ -1,0 +1,11 @@
+debug/main.o
+debug/mainwidget.o
+debug/settingspanel.o
+debug/whiteboard.o
+debug/qhotkey.o
+debug/qhotkey_win.o
+debug/qrc_source.o
+debug/moc_mainwidget.o
+debug/moc_settingspanel.o
+debug/moc_qhotkey.o
+debug/moc_qhotkey_p.o

@@ -1,0 +1,11 @@
+release/main.o
+release/mainwidget.o
+release/settingspanel.o
+release/whiteboard.o
+release/qhotkey.o
+release/qhotkey_win.o
+release/qrc_source.o
+release/moc_mainwidget.o
+release/moc_settingspanel.o
+release/moc_qhotkey.o
+release/moc_qhotkey_p.o

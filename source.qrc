@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/Image">
+        <file>source/image/settings-button-border-image.png</file>
+    </qresource>
+</RCC>
