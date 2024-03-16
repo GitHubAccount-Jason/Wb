@@ -1,13 +1,13 @@
 #include "floatingwindow.h"
 #include "ui_floatingwindow.h"
 #include <QMouseEvent>
-FloatingWindow::FloatingWindow(QWidget *parent)
+FloatingWindow::FloatingWindow(Whiteboard *parent)
     : QWidget(parent)
     , ui(new Ui::FloatingWindow),fs(new FloatingSetting(parent))
 {
     ui->setupUi(this);
     setWindowFlags (Qt::FramelessWindowHint);
-    setAttribute(Qt::WA_TranslucentBackground, true);
+    // setAttribute(Qt::WA_TranslucentBackground, true);
     ui->pushButton->setAttribute(Qt::WA_TransparentForMouseEvents);
     fs->hide();
 }
@@ -47,7 +47,7 @@ void FloatingWindow::mouseMoveEvent(QMouseEvent* ev){
 }
 void FloatingWindow::mouseReleaseEvent(QMouseEvent* ev){
     if (ev->pos()==lastPoint){
-        fs->move(QPoint(pos().x()+128, pos().y()));
+        fs->move(QPoint(pos().x()+129, pos().y()));
         if (fs->isHidden()) fs->show();
         else fs->hide();
     }

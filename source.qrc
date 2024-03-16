@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/Image">
         <file>source/image/settings-button-border-image.png</file>
+        <file>source/image/floatingsetting-pen.png</file>
+        <file>source/image/floatingsetting-eraser.png</file>
     </qresource>
 </RCC>

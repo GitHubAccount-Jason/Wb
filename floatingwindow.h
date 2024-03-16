@@ -12,7 +12,7 @@ class FloatingWindow : public QWidget
     Q_OBJECT
 
 public:
-    explicit FloatingWindow(QWidget *parent = nullptr);
+    explicit FloatingWindow(Whiteboard *parent = nullptr);
     ~FloatingWindow();
     FloatingSetting* fs;
     void setTransparent(){

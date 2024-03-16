@@ -26,8 +26,10 @@
    <string>Form</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">border-radius: 32px;
-background-color: rgba(202, 202, 202, 150);</string>
+   <string notr="true">
+border-radius: 32px;
+background-color: rgba(200, 200, 200, 150);
+</string>
   </property>
   <widget class="QPushButton" name="pushButton">
    <property name="geometry">
@@ -51,8 +53,10 @@ background-color: rgba(202, 202, 202, 150);</string>
     </size>
    </property>
    <property name="styleSheet">
-    <string notr="true">border-image: url(:/Image/source/image/settings-button-border-image.png);
+    <string notr="true">QPushButton#pushButton{
+border-image: url(:/Image/source/image/settings-button-border-image.png);
 border-radius: 32px
+}
 </string>
    </property>
    <property name="text">

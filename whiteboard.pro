@@ -18,6 +18,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 # Input
 HEADERS += mainwidget.h \
     floatingsetting.h \
+    floatingsettingpen.h \
     floatingwindow.h \
     settingspanel.h \
     wbdefs.h \
@@ -25,10 +26,12 @@ HEADERS += mainwidget.h \
 
 FORMS += mainwidget.ui \
     floatingsetting.ui \
+    floatingsettingpen.ui \
     floatingwindow.ui \
     settingspanel.ui
 SOURCES += main.cpp \
     floatingsetting.cpp \
+    floatingsettingpen.cpp \
     floatingwindow.cpp \
            mainwidget.cpp \
     settingspanel.cpp \
