@@ -4,14 +4,14 @@
 // nextScenePos == scene.size() => cur scene is tmpScene
 // else cur scene is scene[nextScenePos]
 Whiteboard::Whiteboard()
-    : mode(WBMODE_PEN),
-      pen(QColorConstants::Blue, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),
-      brush(QColorConstants::Blue) {
+    : mode(WBMODE_PEN), pen(QColorConstants::Blue, 10, Qt::SolidLine,
+                            Qt::RoundCap, Qt::RoundJoin),
+      brush(QColorConstants::Red) {
   nextScenePos = 0;
   fl = new FloatingWindow(this);
   fl->hide();
-  tmpScene.pen=pen;
-  tmpScene.brush=brush;
+  tmpScene.pen = &pen;
+  tmpScene.brush = nullptr;
   qDebug() << "Whiteboard constructed";
 }
 Whiteboard::~Whiteboard() {}
@@ -26,52 +26,17 @@ void Whiteboard::paintEvent(QPaintEvent *ev) { /*{{{*/
   }
   tmpScene.paint(*this);
 
-   painter.end();
+  painter.end();
 } /*}}}*/
-void bezier2(const QPointF &p0, const QPointF &p1, const QPointF &p2, /*{{{*/
-             qreal prec, QList<QLineF> &push_list) {
-
-  QVarLengthArray<QPointF> retp(1 / prec + 2);
-  size_t i = 0;
-  for (; i * prec < 1; ++i) {
-#define t (i * prec)
-    retp[i] =
-        (1.0 - t) * (1.0 - t) * p0 + 2.0 * t * (1.0 - t) * p1 + t * t * p2;
-#undef t
-  }
-  retp[i] = p2;
-  i = 1;
-  for (; i * prec < 1; ++i) {
-    push_list.emplaceBack(retp[i - 1], retp[i]);
-  }
-  push_list.emplaceBack(retp[i - 1], retp[i]);
-} /*}}}*/
-template <class A> A min(const A &a, const A &b) { return std::min(a, b); }
-template <class A> A min(const A &a, const A &b, const A &L...) {
-  return min(min(a, b), L);
-}
-template <class A> A max(const A &a, const A &b) { return std::max(a, b); }
-template <class A> A max(const A &a, const A &b, const A &L...) {
-  return max(max(a, b), L);
-}
-bool isTwoLineNear(const QLineF &a, const QLineF &b) {
-  qreal le = min<qreal>(a.y1(), a.y2(), b.y1(), b.y2());
-  qreal ri = max<qreal>(a.y1(), a.y2(), b.y1(), b.y2());
-  qreal up = min<qreal>(a.x1(), a.x2(), b.x1(), b.x2());
-  qreal lo = max<qreal>(a.x1(), a.x2(), b.x1(), b.x2());
-  return std::sqrt(std::pow(ri - le, 2) + std::pow(up - lo, 2)) <= 1.414;
-}
-QLineF chgTwoNearLineIntoOne(const QLineF &a, const QLineF &b) {
-  return QLineF(a.p1(), b.p2());
-}
-
 void Whiteboard::mousePressEvent(QMouseEvent *ev) { /*{{{*/
   traceLen = 0;
-    traceSpeed=0;
+  traceSpeed = 0;
+  isPressTriggered = true;
   if ((ev->button() == Qt::MouseButton::RightButton)) {
     return;
   }
-  isPressTriggered = true;
+  tmpScene.path.clear();
+  tmpScene.isDrawPatchPoint=false;
   if (!opSc.empty()) {
     opSc.erase(opSc.begin() + nextScenePos, opSc.end());
   }
@@ -85,20 +50,15 @@ void Whiteboard::mousePressEvent(QMouseEvent *ev) { /*{{{*/
   } else if (mode == WBMODE_ERASER) {
     this->mouseMoveTrace.push_back(ev->position());
   }
-} /*}}}*/
+  tmpScene.path.moveTo(ev->position());
+  } /*}}}*/
 
 void Whiteboard::mouseMoveEvent(QMouseEvent *ev) { /*{{{*/
   traceLen += disPoints(mouseMoveTrace.back(), ev->position());
-
-  if ((ev->buttons() & Qt::MouseButton::RightButton) ||
-      isPressTriggered == false) {
-    return;
-  }
   l = min(l, ev->pos().x());
   r = max(r, ev->pos().x());
   u = min(u, ev->pos().y());
   d = max(d, ev->pos().y());
-#define mid(a, b) (QPointF((a.x() + b.x()) / 2, (a.y() + b.y()) / 2))
 #define AVAILABLE (4)
   if (mode == WBMODE_PEN) {
     if (mouseMoveTrace.size() != 0 &&
@@ -106,33 +66,32 @@ void Whiteboard::mouseMoveEvent(QMouseEvent *ev) { /*{{{*/
          qAbs(ev->pos().y() - mouseMoveTrace.last().y()) < AVAILABLE)) {
       return;
     }
-    static QList<QPointF> ll;
-    QPointF __mid = mid(mouseMoveTrace.back(), ev->position());
-    if (mouseMoveTrace.length() == 1) {
-      // New line
-      ll.clear();
-      tmpScene.lineList().push_back(
-          QLineF(mouseMoveTrace.back(), __mid));
-      ll.push_back(__mid);
-      ll.push_back(ev->position());
+    if (mouseMoveTrace.length()>=2){
+        if (mouseMoveTrace.length()>=3){
+        tmpScene.path.quadTo(mouseMoveTrace[mouseMoveTrace.length()-2], mid(mouseMoveTrace[mouseMoveTrace.length()-1], mouseMoveTrace[mouseMoveTrace.length()-2]));
+        }
+        tmpScene.isDrawPatchPoint=true;
+    tmpScene.lastline = QLineF(mouseMoveTrace.last(), ev->position());
+    tmpScene.beginPoint = mid(mouseMoveTrace[mouseMoveTrace.length()-1], mouseMoveTrace[mouseMoveTrace.length()-2]);
     }
-    ll.push_back(__mid);
-    bezier2(ll[0], ll[1], ll[2], 0.08, tmpScene.lineList());
-    ll.pop_front();
-    ll.pop_front();
-    ll.push_back(ev->position());
-    this->mouseMoveTrace.push_back(ev->position());
-    update();
-  } else if (mode == WBMODE_ERASER)
-  {
-    }
-    mouseMoveTrace.push_back(ev->position());
-        traceSpeed=traceLen/(mouseMoveTrace.size()-1);
+
+  } else if (mode == WBMODE_ERASER) {
+  }
+  mouseMoveTrace.push_back(ev->position());
+
+  traceSpeed = traceLen / (mouseMoveTrace.size() - 1);
+  update();
 } /*}}}*/
 
 void Whiteboard::mouseReleaseEvent(QMouseEvent *ev) { /*{{{*/
+    qDebug()<<ev->pos();
+
+  if ((ev->buttons() & Qt::MouseButton::RightButton) ||
+      isPressTriggered == false) {
+    return;
+  }
   traceLen += disPoints(mouseMoveTrace.back(), ev->position());
-    traceSpeed=traceLen/(mouseMoveTrace.size()-1);
+  traceSpeed = traceLen / (mouseMoveTrace.size() - 1);
   l = min(l, ev->pos().x());
   r = max(r, ev->pos().x());
   u = min(u, ev->pos().y());
@@ -156,17 +115,6 @@ void Whiteboard::mouseReleaseEvent(QMouseEvent *ev) { /*{{{*/
     if (mouseMoveTrace.size() != 1) {
       update();
     }
-    // scan near line
-    for (auto i = tmpScene.lineList().begin();
-         i < tmpScene.lineList().end() - 1; ++i) {
-      if (isTwoLineNear(*i, *(i + 1))) {
-        auto l = chgTwoNearLineIntoOne(*i, *(i + 1));
-        i = tmpScene.lineList().erase(i);
-        *i = l;
-        --i;
-        continue;
-      }
-    }
     {
 #define x1 mouseMoveTrace.front().x()
 #define y1 mouseMoveTrace.front().y()
@@ -180,7 +128,6 @@ void Whiteboard::mouseReleaseEvent(QMouseEvent *ev) { /*{{{*/
       if (1 - (e / traceSpeed) < -2) {
         isline = false;
       }
-      qDebug()<<1 - (e / traceSpeed)<<"\n";
     }
     if (!isline) {
       double e = 0;
@@ -189,7 +136,7 @@ void Whiteboard::mouseReleaseEvent(QMouseEvent *ev) { /*{{{*/
       for (auto &point : mouseMoveTrace) {
         e += disPointCircle(point, Circle{o, _r});
       }
-      e/=mouseMoveTrace.size();
+      e /= mouseMoveTrace.size();
       if (1 - (e / traceSpeed) < 0.5) {
         iscircle = false;
       }
@@ -202,22 +149,37 @@ void Whiteboard::mouseReleaseEvent(QMouseEvent *ev) { /*{{{*/
 #undef y1
 #undef x2
 #undef y2
+      QPainterPath path;
     if (isline == true) {
-      opSc.emplaceBack(
-          LineList{Line(mouseMoveTrace.front(), mouseMoveTrace.back())}, pen,
-          brush, QRect{l, u, r - l, d - u});
+      path.moveTo(mapToRect(mouseMoveTrace.front(), QRect{l, u, r - l, d - u},
+                            pen.widthF()));
+        path.lineTo(mouseMoveTrace.back());
     } else if (iscircle == true) {
-      opSc.emplaceBack(Circle{circleO, circleR}, pen, brush,
-                       QRect{circleO.x() - (int)circleR,
+        path.addEllipse(QRect{circleO.x() - (int)circleR,
                              circleO.y() - (int)circleR, r * 2, r * 2});
     } else {
-      opSc.emplaceBack(tmpScene.lineList(), pen, brush,
-                       QRect{l, u, r - l, d - u});
+      path.moveTo(mouseMoveTrace.front());
+      if (mouseMoveTrace.length()>=2){
+          path.lineTo(mid(mouseMoveTrace[0], mouseMoveTrace[1]));
+      }
+      for (int i = 0; i + 2 < mouseMoveTrace.length()-1; ++i) {
+         path.quadTo(mouseMoveTrace[i+1],mid(mouseMoveTrace[i+1], mouseMoveTrace[i + 2]));
+      }
     }
+    QPointF offset(-l+pen.widthF(), -u+pen.widthF());
+      path.translate(offset);
+
+      QPointF beginPoint = mid(mouseMoveTrace[mouseMoveTrace.length()-2], mouseMoveTrace[mouseMoveTrace.length()-3])+offset;
+      QLineF lastLine = QLineF(mouseMoveTrace[mouseMoveTrace.length()-2], mouseMoveTrace.back());
+      lastLine.translate(offset);
+      // qDebug()<<mouseMoveTrace.back()<<"|"<<ev->pos();
+
+      opSc.emplaceBack(path, lastLine,beginPoint, pen,QBrush(),QRectF(l, u, r-l, d-u));
   } else if (mode == WBMODE_ERASER) {
   }
 
-  tmpScene.lineList().clear();
+  tmpScene.path.clear();
+  tmpScene.isDrawPatchPoint=false;
 
   nextScenePos = opSc.size();
   mouseMoveTrace.clear();

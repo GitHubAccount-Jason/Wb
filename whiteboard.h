@@ -11,6 +11,30 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QWidget>
+#define mid(a, b) (QPointF((a.x() + b.x()) / 2, (a.y() + b.y()) / 2))
+
+template <class A> A min(const A &a, const A &b) { return std::min(a, b); }
+template <class A> A min(const A &a, const A &b, const A &L...) {
+  return min(min(a, b), L);
+}
+template <class A> A max(const A &a, const A &b) { return std::max(a, b); }
+template <class A> A max(const A &a, const A &b, const A &L...) {
+  return max(max(a, b), L);
+}
+inline void drawPatchPoint(QPainter *painter, const QLineF &path,const QPointF&beginPoint,  const QPen&pen) {
+  qreal temp = (pen.widthF() - 3) / 100.;
+  int k = 0;
+    QPainterPath p;
+  p.moveTo(beginPoint);
+    p.quadTo(path.p1(), path.p2());
+  for (double i = 0; i <path.length(); i += 1) {
+    k++;
+
+      painter->setPen(QPen(pen.color(), pen.widthF() - temp * (k/path.length()*100), pen.style(),
+                         pen.capStyle(), pen.joinStyle()));
+    painter->drawPoint(p.pointAtPercent(i/path.length()));
+  }
+}
 inline double disPoints(const QPointF &p1, const QPointF &p2) {
   return sqrt(pow(p1.x() - p2.x(), 2) + pow(p1.y() - p2.y(), 2));
 }
@@ -74,92 +98,20 @@ class Whiteboard : public QWidget {
 public:
   int mode;
 
-  class WbObject {
-  public:
-    int type;
-
-    QPen pen;
-    QBrush brush;
-    void *extra;
-    WbObject() : type(WBOBJTYPE_EXTRA), extra(nullptr) {}
-    WbObject(const WbObject &wo) {
-      pen = wo.pen;
-      brush = wo.brush;
-      type = wo.type;
-      switch (wo.type) {
-      case WBOBJTYPE_LINE:
-        extra = new Line(*(Line *)wo.extra);
-        break;
-      case WBOBJTYPE_LINELIST:
-        extra = new LineList(*(LineList *)wo.extra);
-      default:
-        break;
-      };
-    }
-    WbObject(const Line &l, const QPen &pen, const QBrush &brush)
-        : type(WBOBJTYPE_LINE), pen(pen), brush(brush), extra(new Line(l)) {}
-    WbObject(const LineList &l, const QPen &pen, const QBrush &brush)
-        : type(WBOBJTYPE_LINELIST), pen(pen), brush(brush),
-          extra(new LineList(l)) {}
-    WbObject(const Circle &c, const QPen &pen, const QBrush &brush)
-        : type(WBOBJTYPE_LINELIST), pen(pen), brush(brush),
-          extra(new Circle(c)) {}
-    WbObject &operator=(const WbObject &wo) {
-      pen = wo.pen;
-      brush = wo.brush;
-      type = wo.type;
-      switch (wo.type) {
-      case WBOBJTYPE_LINE:
-        extra = new Line(*(Line *)wo.extra);
-        break;
-      case WBOBJTYPE_LINELIST:
-        extra = new LineList(*(LineList *)wo.extra);
-        break;
-      case WBOBJTYPE_CIRCLE:
-        extra = new Circle(*(Circle *)wo.extra);
-        break;
-      default:
-        break;
-      }
-      return *this;
-    }
-    Line &line() { return *(Line *)extra; }
-    const Line &line() const { return *(Line *)extra; }
-    LineList &linelist() { return *(LineList *)extra; }
-    const LineList &linelist() const { return *(LineList *)extra; }
-    Circle &circle() { return *(Circle *)extra; }
-    const Circle &circle() const { return *(Circle *)extra; }
-    ~WbObject() {
-      if (extra != nullptr) {
-        switch (type) {
-        case WBOBJTYPE_LINE:
-          delete (Line *)extra;
-          break;
-        case WBOBJTYPE_LINELIST:
-          delete (LineList *)extra;
-          break;
-        case WBOBJTYPE_CIRCLE:
-          delete (Circle *)extra;
-          break;
-        default:
-          break;
-        }
-      }
-    }
-  };
   class WbScene {
     QPixmap pm;
     QPoint p;
-    bool isValid = true;
-    std::variant<LineList, Circle> extra;
+    QPainterPath extra;
     int tp;
 
   public:
     WbScene() : tp(WBOBJTYPE_NONE) {}
-    WbScene(const LineList &l, QPen pen, const QBrush &brush, const QRect &rect)
-        : pm((pen.width() * 2 + rect.width()),
-             (pen.width() * 2 + rect.height())),
-          p(QPoint(rect.left() - pen.width(), rect.top() - pen.width())),
+    //
+    WbScene(const QPainterPath &l, const QLineF&lastline, const QPointF&beginPoint, QPen pen, const QBrush &brush, const QRectF&point
+            )
+        : pm((pen.width() * 2 + point.width()),
+             (pen.width() * 2 + point.height())),
+          p(QPoint(point.x() - pen.width(), point.y() - pen.width())),
           tp(WBOBJTYPE_LINELIST) {
       extra = l;
       pm.fill(Qt::transparent);
@@ -169,190 +121,43 @@ public:
       painter.setRenderHint(QPainter::Antialiasing);
       painter.setPen(pen);
       painter.setBrush(brush);
-      if (l.size() == 1) {
-        painter.drawLine(
-            Line(QPointF(l.front().p1().x() - rect.left() + pen.width(),
-                         l.front().p1().y() - rect.top() + pen.width()),
-                 QPointF(l.front().p2().x() - rect.left() + pen.width(),
-                         l.front().p2().y() - rect.top() + pen.width())));
-      } else {
-        for (int i = 0; i < l.size() - 1; ++i) {
-          // pen.setWidthF(widthLevel(disPoints(l[i].p1(), l[i].p2())) *
-          //              pen.widthF());
-          painter.setPen(pen);
-          painter.drawLine(
-              Line(QPointF(l[i].p1().x() - rect.left() + pen.width(),
-                           l[i].p1().y() - rect.top() + pen.width()),
-                   QPointF(l[i].p2().x() - rect.left() + pen.width(),
-                           l[i].p2().y() - rect.top() + pen.width())));
-        }
-        if (l.size() > 1) {
-          if (l.back().length() < 3) {
-            painter.drawLine(mapToRect(l.back(), rect, pen.widthF()));
-          } else {
-            auto w = pen.widthF();
-            pen.setWidthF(w / 2);
-            painter.setPen(pen);
-            auto &line = l.back();
-            double A = line.y2() - line.y1(), B = line.x1() - line.x2();
-            QPointF p1(line.x1() - w * A / (2 * (sqrt(A * A + B * B))) -
-                           rect.left() + w,
-                       line.y1() + w * B / (2 * (sqrt(A * A + B * B))) -
-                           rect.top() + w);
-            QPointF p2(line.x2() + w * A / (2 * (sqrt(A * A + B * B))) -
-                           rect.left() + w,
-                       line.y2() - w * B / (2 * (sqrt(A * A + B * B))) -
-                           rect.top() + w);
-            QPointF p3(5 * (line.p2().x() - line.p1().x()) + line.p1().x(),
-                       5 * (line.p2().y() - line.p1().y()) + line.p1().y());
-            QPointF _p1(line.x1() - rect.left() + w,
-                        line.y1() - rect.top() + w);
-
-            QPolygonF tri{
-                p1, p2,
-                QPointF(p3.x() - rect.left() + w, p3.y() - rect.top() + w)};
-            painter.drawPolygon(tri);
-            painter.drawPoint(line.p1());
-
-            if (l.size() > 1) {
-              pen.setWidth(w);
-              painter.setPen(pen);
-              QPointF m = QPointF((p1.x() + p2.x()) / 2, (p1.y() + p2.y()) / 2);
-              painter.drawLine(
-                  QLineF(QPointF(l[l.size() - 2].x2() - rect.left() + w,
-                                 l[l.size() - 2].y2() - rect.top() + w),
-                         m));
-            }
-
-            // painter.drawLine(_p1, p1);
-            // painter.drawLine(_p1, p2);
-          }
-        }
-        painter.end();
-      }
-    }
-    WbScene(const Circle &l, const QPen &pen, const QBrush &brush,
-            const QRect &rect)
-        : pm((pen.width() * 2 + rect.width()),
-             (pen.width() * 2 + rect.height())),
-          p(QPoint(rect.left() - pen.width(), rect.top() - pen.width())),
-          tp(WBOBJTYPE_CIRCLE) {
-      (void)brush;
-      extra = l;
-      pm.fill(Qt::transparent);
-      QPainter painter;
-      // painter.drawPolygon(QPolygon())
-      painter.begin(&pm);
-      painter.setCompositionMode(QPainter::CompositionMode_Source);
-      painter.setRenderHint(QPainter::Antialiasing);
-      painter.setPen(pen);
-      painter.setBrush(QColor(0, 0, 0, 0));
-      painter.drawEllipse(pen.width(), pen.width(), l.r + pen.width(),
-                          l.r + pen.width());
+      painter.drawPath(extra);
+      drawPatchPoint(&painter, lastline,beginPoint, pen);
       painter.end();
+      // qDebug()<<p;
     }
     void paint(QPainter &p) { p.drawPixmap(this->p, pm); }
-    // LineList* asLineList(){if (tp==WBOBJTYPE_LINELIST)return
-    // &std::get<LineList>(extra);else return nullptr;} const LineList*
-    // asLineList()const{if (tp==WBOBJTYPE_LINELIST)return
-    // &std::get<LineList>(extra);else return nullptr;}
-    void reInit() {}
-    bool isInRect(const QPoint &point) {
-      return point.x() > p.x() && point.x() < p.x() + pm.width() &&
-             point.y() > p.y() && point.y() < p.y() + pm.width();
-    }
     // 判断鼠标轨迹是否经过对象
     bool isInteract(const QPoint &pa, const QPoint &pb) {
-      switch (tp) {
-      case WBOBJTYPE_LINELIST:
-        for (int i = 0; i != std::get<LineList>(extra).size(); ++i) {
-          if (std::get<LineList>(extra)[i].intersects(QLineF(pa, pb)) ==
-              QLineF::BoundedIntersection) {
-            // std::get<LineList>(extra).erase(std::get<LineList>(extra).begin()
-            // + i);
-            // --i;
-            return true;
-          }
-        }
-        // if (std::get<LineList>(extra).size() == 0) {
-        // isValid = false;
-        // }
-        return false;
-        break;
-      case WBOBJTYPE_CIRCLE:
-        return disLineCircle(QLineF(pa, pb), std::get<Circle>(extra)) <= 0;
-      default:
-        return false;
-        break;
-      }
+      return extra.intersects(QRectF(pa, pb));
     }
   };
   class WbTmpScene {
   public:
-    int tp = WBOBJTYPE_LINELIST;
-    std::variant<LineList> d = LineList();
-    QPen pen;
-    QBrush brush;
+    QPen *pen;
+    QBrush *brush;
+    QPainterPath path;
+    QLineF lastline;
+    QPointF beginPoint;
+    bool isDrawPatchPoint=false;
     void paint(QWidget &w) {
-      LineList &l = std::get<LineList>(d);
+        // qDebug()<<__PRETTY_FUNCTION__<<"\n";
       QPainter painter(&w);
-      switch (tp) {
-      case WBOBJTYPE_LINELIST:
-        painter.setCompositionMode(QPainter::CompositionMode_Source);
-        painter.setRenderHint(QPainter::Antialiasing);
-        painter.setPen(pen);
-        painter.setBrush(brush);
-        if (l.size() == 1) {
-          painter.drawLine(l.front());
-        } else {
-          for (int i = 0; i < l.size() - 1; ++i) {
-            // pen.setWidthF(widthLevel(disPoints(l[i].p1(), l[i].p2())) *
-            //              pen.widthF());
-            painter.setPen(pen);
-            painter.drawLine(l[i]);
-          }
-          if (l.size() > 1) {
-            if (l.back().length() < 3) {
-              painter.drawLine(l.back());
-            } else {
-              auto w = pen.widthF();
-              pen.setWidthF(w / 2);
-              painter.setPen(pen);
-              auto &line = l.back();
-              double A = line.y2() - line.y1(), B = line.x1() - line.x2();
-              QPointF p1(line.x1() - w * A / (2 * (sqrt(A * A + B * B))),
-                         line.y1() + w * B / (2 * (sqrt(A * A + B * B))));
-              QPointF p2(line.x2() + w * A / (2 * (sqrt(A * A + B * B))),
-                         line.y2() - w * B / (2 * (sqrt(A * A + B * B))));
-              QPointF p3(5 * (line.p2().x() - line.p1().x()) + line.p1().x(),
-                         5 * (line.p2().y() - line.p1().y()) + line.p1().y());
-              QPointF _p1(line.x1(), line.y1());
-
-              QPolygonF tri{p1, p2, QPointF(p3.x(), p3.y())};
-              painter.drawPolygon(tri);
-              painter.drawPoint(line.p1());
-
-              if (l.size() > 1) {
-                pen.setWidth(w);
-                painter.setPen(pen);
-                QPointF m =
-                    QPointF((p1.x() + p2.x()) / 2, (p1.y() + p2.y()) / 2);
-                painter.drawLine(QLineF(
-                    QPointF(l[l.size() - 2].x2(), l[l.size() - 2].y2()), m));
-              }
-
-              // painter.drawLine(_p1, p1);
-              // painter.drawLine(_p1, p2);
-            }
-          }
-          break;
-        default:
-          break;
-        }
-        painter.end();
+      painter.setCompositionMode(QPainter::CompositionMode_Source);
+      painter.setRenderHint(QPainter::Antialiasing);
+      if (pen!=nullptr){
+      painter.setPen(*pen);
       }
+      if (brush!=nullptr){
+      painter.setBrush(*brush);
+      }
+      painter.drawPath(path);
+      if (pen!=nullptr&&isDrawPatchPoint){
+          // qDebug()<<last;
+          drawPatchPoint(&painter, lastline,beginPoint, *pen);
+      }
+      painter.end();
     }
-    LineList &lineList() { return std::get<LineList>(d); }
   };
 
   QPen pen;
