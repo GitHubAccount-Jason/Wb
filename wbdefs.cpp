@@ -82,7 +82,7 @@ public:
       painter.end();
       state=DONE;
     }
-  void onPaint(QWidget&w) override {
+  void onPaint(QPixmap&w) override {
     switch (state) {
     case NONE:
       return;

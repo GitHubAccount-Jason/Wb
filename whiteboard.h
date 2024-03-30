@@ -158,6 +158,7 @@ private:
   qsizetype nextScenePos;
 
   QList<WbControl*> controls;
+  QPixmap pm;
 
 };
 

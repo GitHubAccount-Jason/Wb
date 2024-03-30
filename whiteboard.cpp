@@ -7,7 +7,9 @@
 Whiteboard::Whiteboard()
     : mode(WBMODE_PEN), pen(QColorConstants::Blue, 10, Qt::SolidLine,
                             Qt::RoundCap, Qt::RoundJoin),
-      brush(QColorConstants::Red) {
+    brush(QColorConstants::Red) ,pm(QSize(QGuiApplication::screens().at(0)->geometry().size())){
+    pm.fill(Qt::transparent);
+
   nextScenePos = 0;
   fl = new FloatingWindow(this);
   fl->hide();
@@ -21,9 +23,13 @@ Whiteboard::~Whiteboard() {
 
 void Whiteboard::paintEvent(QPaintEvent *ev) { /*{{{*/
   (void)ev;
+    pm.fill(Qt::transparent);
     for (int i = 0; i != nextScenePos; ++i){
-        controls[i]->onPaint(*this);
+        controls[i]->onPaint(pm);
     }
+    QPainter p(this);
+    p.drawPixmap(QPoint(0, 0), pm);
+    p.end();
 
 } /*}}}*/
 void Whiteboard::mousePressEvent(QMouseEvent *ev) { /*{{{*/

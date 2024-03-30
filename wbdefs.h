@@ -124,7 +124,7 @@ public:
     virtual void onPress(const QPointF& p)=0;
     virtual void onMove(const QPointF&p)=0;
     virtual void onRelease(const QPointF&p)=0;
-    virtual void onPaint(QWidget&w)=0;
+    virtual void onPaint(QPixmap&w)=0;
     virtual ~WbControl(){}
     template<class A>
     bool checkFn(const QString&name){
