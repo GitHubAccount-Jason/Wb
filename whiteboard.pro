@@ -35,6 +35,7 @@ SOURCES += main.cpp \
     floatingwindow.cpp \
            mainwidget.cpp \
     settingspanel.cpp \
+    wbdefs.cpp \
            whiteboard.cpp \
 
 RESOURCES += source.qrc
