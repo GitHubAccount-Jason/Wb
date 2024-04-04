@@ -121,9 +121,6 @@ public:
 class WbControl{
 public:
     WbControl(Whiteboard*wb, const QPen&pen, const QBrush&brush):wb(wb), pen_(pen), brush_(brush){}
-    virtual void onPress(const QPointF& p)=0;
-    virtual void onMove(const QPointF&p)=0;
-    virtual void onRelease(const QPointF&p)=0;
     virtual void onPaint(QPixmap&w)=0;
     virtual ~WbControl(){}
     template<class A>
@@ -146,5 +143,22 @@ protected:
     QBrush brush_;
 
 };
+class WbTmp{
+public:
+    WbTmp(Whiteboard*wb, const QPen&pen, const QBrush&brush):wb(wb), pen_(pen), brush_(brush){}
+    virtual ~WbTmp(){}
+    virtual void onPress(const QPointF& p)=0;
+    virtual void onMove(const QPointF&p)=0;
+    virtual void onRelease(const QPointF&p)=0;
+    virtual void onPaint(QPixmap&w)=0;
+protected:
+ Whiteboard *wb;
+    QPen pen_;
+    QBrush brush_;
+};
+
+// 自由画笔临时控件
+class WbTmpFreePen;
+// 自由画笔控件
 class WbControlFreePen;
 #endif // WBDEFS_H

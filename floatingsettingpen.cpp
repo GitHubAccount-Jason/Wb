@@ -1,12 +1,14 @@
 #include "floatingsettingpen.h"
 #include "ui_floatingsettingpen.h"
 #include "whiteboard.h"
-FloatingSettingPen::FloatingSettingPen(Whiteboard *parent)
-    : QWidget(parent), ui(new Ui::floatingsettingpen), wb(parent) {
+FloatingSettingPen::FloatingSettingPen(QWidget* parent, Whiteboard *wb)
+    : QWidget(parent), ui(new Ui::floatingsettingpen), wb(wb) {
   ui->setupUi(this);
   setAttribute(Qt::WA_StyledBackground);
+    setWindowFlag(Qt::WindowStaysOnTopHint);
   // setAttribute(Qt::WA_TranslucentBackground, false);
-  // setWindowFlags (Qt::FramelessWindowHint);
+    hide();
+  setWindowFlags (Qt::FramelessWindowHint);
 }
 
 FloatingSettingPen::~FloatingSettingPen() { delete ui; }

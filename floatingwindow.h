@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include "floatingsetting.h"
+#include "mainwidget.h"
 namespace Ui {
 class FloatingWindow;
 }
@@ -16,10 +17,14 @@ public:
     ~FloatingWindow();
     FloatingSetting* fs;
     void setTransparent(){
-        hide();
+        setParent(nullptr);
+  setWindowFlag(Qt::SubWindow);
+  setWindowFlag(Qt::WindowStaysOnTopHint);
+        show();
         fs->setTransparent();
     }
     void setUntransparent(){
+        setParent(wb);
         show();
         fs->setUntransparent();
     }
@@ -29,6 +34,7 @@ protected:
     virtual void mouseReleaseEvent(QMouseEvent *ev) override;
 private:
     Ui::FloatingWindow *ui;
+    Whiteboard* wb;
 };
 
 #endif // FLOATINGWINDOW_H

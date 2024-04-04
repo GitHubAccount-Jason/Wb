@@ -16,6 +16,7 @@ MainWidget::MainWidget(QWidget *parent)
   board->show();
   settingsPanel = new SettingsPanel(this, &this->board->pen,
                                     &this->board->brush, (int *)&board->mode);
+
 }
 
 void MainWidget::resizeEvent(QResizeEvent *ev) { board->resize(this->size()); }
@@ -43,12 +44,12 @@ void MainWidget::setTransparent() {
   update();
 }
 void MainWidget::setUntransparent() {
+  board->setUntransparent();
   HWND hwnd = (HWND)winId();
   DWORD dwlong = GetWindowLongW(hwnd, GWL_EXSTYLE);
   SetWindowLongW(hwnd, GWL_EXSTYLE, (dwlong & ~WS_EX_TRANSPARENT));
   state = ST_NORMAL;
   board->changeMode(WBMODE_PEN);
-  board->setUntransparent();
   setFocus();
   update();
 }

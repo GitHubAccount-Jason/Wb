@@ -12,6 +12,7 @@
 #include <QPainterPath>
 #include <QWidget>
 class FloatingWindow;
+class MainWidget;
 class Whiteboard : public QWidget {
 public:
   int mode;
@@ -148,6 +149,10 @@ public:
     }
   };
   EvInfo evinfo;
+  QList<WbControl*> controls;
+  void addControl(WbControl* c);
+  MainWidget* mainwidget() {return (MainWidget*)parent();}
+  const MainWidget* mainwidget() const {return (const MainWidget*)parent();}
 protected:
   virtual void paintEvent(QPaintEvent *ev) override;
   virtual void mousePressEvent(QMouseEvent *ev) override;
@@ -157,8 +162,9 @@ protected:
 private:
   qsizetype nextScenePos;
 
-  QList<WbControl*> controls;
   QPixmap pm;
+
+  WbTmp* curTmp;
 
 };
 

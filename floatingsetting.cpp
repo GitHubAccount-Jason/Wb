@@ -1,12 +1,16 @@
 #include "floatingsetting.h"
 #include "ui_floatingsetting.h"
 
-FloatingSetting::FloatingSetting(Whiteboard *parent)
-    : QWidget(parent)
+FloatingSetting::FloatingSetting(QWidget* parent, Whiteboard *wb)
+    : QWidget(parent),wb(wb)
     , ui(new Ui::FloatingSetting)
 {
+
     ui->setupUi(this);
-    p=new FloatingSettingPen(parent);
+    setWindowFlag(Qt::WindowStaysOnTopHint);
+    setWindowFlag(Qt::SubWindow);
+    setWindowFlag(Qt::FramelessWindowHint);
+    p=new FloatingSettingPen(parent, wb);
     p->setAttribute(Qt::WA_TranslucentBackground, false);
     p->setWindowFlag(Qt::FramelessWindowHint);
     p->hide();
@@ -34,3 +38,23 @@ void FloatingSetting::hideEvent(QHideEvent *event){
         p->hide();
     }
 }
+
+void FloatingSetting::setTransparent(){
+        QPoint p = pos();
+        setParent(nullptr);
+  setWindowFlag(Qt::SubWindow);
+  setWindowFlag(Qt::WindowStaysOnTopHint);
+  setAttribute(Qt::WA_TranslucentBackground, true);
+        move(p);
+        this->p->setTransparent();
+    }
+void FloatingSetting::setUntransparent(){
+        QPoint p = pos();
+        setParent(wb);
+  setWindowFlag(Qt::SubWindow, 0);
+  setWindowFlag(Qt::WindowStaysOnTopHint, 0);
+  setAttribute(Qt::WA_TranslucentBackground, true);
+        move(p);
+        this->p->setUntransparent();
+        // show();
+    }

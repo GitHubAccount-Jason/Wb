@@ -25,6 +25,9 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: rgb(170, 255, 255);</string>
+  </property>
   <widget class="QPushButton" name="pbPen">
    <property name="geometry">
     <rect>
