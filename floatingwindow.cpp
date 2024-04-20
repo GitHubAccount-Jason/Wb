@@ -7,6 +7,7 @@ FloatingWindow::FloatingWindow(Whiteboard *parent)
 
   ui->setupUi(this);
   setWindowFlags(Qt::FramelessWindowHint);
+  setWindowFlag(Qt::WindowStaysOnTopHint);
   setAttribute(Qt::WA_TranslucentBackground, true);
   setWindowFlag(Qt::SubWindow);
   ui->pushButton->setAttribute(Qt::WA_TransparentForMouseEvents);

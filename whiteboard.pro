@@ -44,3 +44,5 @@ include(QHotkey/qhotkey.pri)
 LIBS += -L$$PWD/QHotkey/QHotkey
 INCLUDEPATH += $$PWD/QHotkey/QHotkey
 QMAKE_CXXFLAGS_RELEASE += -O3       # Release -O3
+
+CONFIG += c++2a

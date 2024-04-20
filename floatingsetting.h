@@ -25,6 +25,8 @@ public:
 private slots:
     void on_pbPen_pressed();
 
+    void on_pbEraser_pressed();
+
 private:
     Ui::FloatingSetting *ui;
     Whiteboard*wb;

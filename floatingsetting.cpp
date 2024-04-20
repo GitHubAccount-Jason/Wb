@@ -1,5 +1,6 @@
 #include "floatingsetting.h"
 #include "ui_floatingsetting.h"
+#include "wbdefs.cpp"
 
 FloatingSetting::FloatingSetting(QWidget* parent, Whiteboard *wb)
     : QWidget(parent),wb(wb)
@@ -58,3 +59,9 @@ void FloatingSetting::setUntransparent(){
         this->p->setUntransparent();
         // show();
     }
+
+void FloatingSetting::on_pbEraser_pressed()
+{
+    wb->changeTmp<WbTmpEraser>();
+}
+

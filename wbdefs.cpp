@@ -7,98 +7,170 @@ class WbControlFreePen : public WbControl {
 private:
   QList<QPointF> trace;
 
-  bool isDrawPatchPoint = false;
   QPainterPath path;
   QLineF last;
   QPointF begin;
 
+  // >= 2000: false
+  // < 2000: true
+  bool usePm = false;
   QPointF p;
   QPixmap pm;
+  QPainterPath interactpath;
 
 public:
   WbControlFreePen(Whiteboard *wb, const QPen &pen, const QBrush &brush)
       : WbControl(wb, pen, brush) {
     // fns.emplaceBack(WbFunction())
   }
-  WbControlFreePen(Whiteboard *wb, const QPen &pen, const QBrush &brush, const QPainterPath&path, const QLineF&last, const QPointF& begin, const QPointF& p)
+  WbControlFreePen(Whiteboard *wb, const QPen &pen, const QBrush &brush,
+                   const QPainterPath &path, const QLineF &last,
+                   const QPointF &begin, const QPointF &p)
       : WbControl(wb, pen, brush), path(path), last(last), begin(begin), p(p) {
     auto l = this->wb->evinfo.l;
     auto r = this->wb->evinfo.r;
     auto u = this->wb->evinfo.u;
     auto d = this->wb->evinfo.d;
-    pm = (QPixmap(QSize(r - l + 2 * pen_.widthF(), d - u + 2 * pen_.widthF())));
-    pm.fill(Qt::transparent);
-    QPainter painter;
-    painter.begin(&pm);
-    painter.setCompositionMode(QPainter::CompositionMode_Source);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setPen(pen_);
-    painter.setBrush(brush_);
-    painter.drawPath(path);
-    if (last.length() >= 5) {
-      drawPatchPoint(&painter,last,begin, pen_);
+    if ((r - l) * (d - u) >= 2000) {
+      usePm = false;
+
+    } else {
+      usePm = true;
+      QPointF offset(-l + wb->pen.widthF(), -u + wb->pen.widthF());
+      this->begin = this->begin + offset;
+      this->last.translate(offset);
+      this->path.translate(offset);
+      pm = (QPixmap(
+          QSize(r - l + 2 * pen_.widthF(), d - u + 2 * pen_.widthF())));
+      pm.fill(Qt::transparent);
+      QPainter painter;
+      painter.begin(&pm);
+      painter.setCompositionMode(QPainter::CompositionMode_Source);
+      painter.setRenderHint(QPainter::Antialiasing);
+      painter.setPen(pen_);
+      painter.setBrush(brush_);
+      painter.drawPath(path);
+      if (last.length() >= 5) {
+        drawPatchPoint(&painter, last, begin, pen_);
+      }
+      painter.end();
     }
-    painter.end();
+    interactpath = path;
+    interactpath.quadTo(begin, last.center());
+    registfn(WbFunction::make<bool(const QLineF&, double)>("isInteract", [this](const  QLineF&p, double w)->bool {
+        if (this->usePm){
+
+        QPainterPath p_;
+        p_.moveTo(p.p1()-this->p);
+        p_.lineTo(p.p2()-this->p);
+
+        for (int i = 0; i != this->path.elementCount(); ++i){
+        }
+        return this->path.intersects(p_);
+        }else{
+        QPainterPath p_;
+        p_.moveTo(p.p1());
+        p_.lineTo(p.p2());
+        return this->path.intersects(p_);
+
+
+         }}));
+
     // fns.emplaceBack(WbFunction())
   }
   ~WbControlFreePen() {}
 
-
   void onPaint(QPixmap &w) override {
+    if (usePm) {
       QPainter painter(&w);
       // painter.setCompositionMode(QPainter::CompositionMode_Source);
       painter.setRenderHint(QPainter::Antialiasing);
       painter.drawPixmap(this->p, pm);
       painter.end();
+    } else {
+      QPainter painter;
+      painter.begin(&w);
+      painter.setCompositionMode(QPainter::CompositionMode_Source);
+      painter.setRenderHint(QPainter::Antialiasing);
+      painter.setPen(pen_);
+      painter.setBrush(brush_);
+      painter.drawPath(path);
+      if (last.length() >= 5) {
+        drawPatchPoint(&painter, last, begin, pen_);
+      }
+      painter.end();
+    }
   }
 };
-class WbTmpFreePen:public WbTmp{
+class WbTmpFreePen : public WbTmp {
 private:
   QList<QPointF> trace;
 
-    bool activated=false;
+  bool activated = false;
   bool isDrawPatchPoint = false;
   QPainterPath path;
   QLineF last;
   QPointF begin;
+  QPixmap pm;
 
 public:
-  WbTmpFreePen(Whiteboard *wb, const QPen &pen, const QBrush &brush)
-      :WbTmp(wb, pen, brush) {
+  WbTmpFreePen(Whiteboard *wb) : WbTmp(wb) {
     // fns.emplaceBack(WbFunction())
   }
   ~WbTmpFreePen() {}
   void onPress(const QPointF &p) override {
-      trace.clear();
-      isDrawPatchPoint = false;
-      path.clear();
-      last = QLineF(0, 0, 0, 0);
-      begin = QPointF(0, 0);
-      activated = true;
+    pm = QPixmap(wb->geometry().size());
+    pm.fill(Qt::transparent);
+    trace.clear();
+    isDrawPatchPoint = false;
+    path.clear();
+    last = QLineF(0, 0, 0, 0);
+    begin = QPointF(0, 0);
+    activated = true;
 
     trace.push_back(p);
   }
 
   void onMove(const QPointF &p) override {
-    if (trace.length() >= 2) {
-      isDrawPatchPoint = true;
-    }
-    if (trace.length() == 2) {
-      path.moveTo(mid(trace.front(), trace.back()));
+    if (!activated) {
+      return;
     }
     trace.push_back(p);
+    if (trace.length() == 2) {
+      path.moveTo(mid(trace.front(), trace.back()));
+      return;
+    }
+    if (trace.length() <= 3) {
+      return;
+    }
+    QPainterPath _p;
+    _p.moveTo(mid(trace[trace.length() - 4], trace[trace.length() - 3]));
+    _p.quadTo(trace[trace.length() - 3],
+              mid(trace[trace.length() - 3], trace[trace.length() - 2]));
+    QPainter _painter(&pm);
+    _painter.setCompositionMode(QPainter::CompositionMode_Source);
+    _painter.setRenderHint(QPainter::Antialiasing);
+    _painter.setPen(wb->pen);
+    _painter.setBrush(Qt::NoBrush);
+    _painter.drawPath(_p);
     if (trace.length() >= 4) {
       path.quadTo(trace[trace.length() - 3],
                   mid(trace[trace.length() - 3], trace[trace.length() - 2]));
-    QPointF beginPoint =
-        mid(trace[trace.length() - 2], trace[trace.length() - 3]) ;
-    QLineF lastLine = QLineF(trace[trace.length() - 2], trace.back());
-    last = lastLine;
-    begin = beginPoint;
+      QPointF beginPoint =
+          mid(trace[trace.length() - 2], trace[trace.length() - 3]);
+      QLineF lastLine = QLineF(trace[trace.length() - 2],
+                               mid(trace[trace.length() - 2], trace.back()));
+      last = lastLine;
+      begin = beginPoint;
+      drawPatchPoint(&_painter, lastLine, begin, wb->pen);
+      _painter.end();
     }
   }
 
   void onRelease(const QPointF &p) override {
+    if (!activated) {
+      return;
+    }
     if (trace.length() <= 2) {
       // WARNING : MAY BE PROBLEMS
       return;
@@ -107,36 +179,80 @@ public:
     auto r = this->wb->evinfo.r;
     auto u = this->wb->evinfo.u;
     auto d = this->wb->evinfo.d;
-    QPointF offset(-l + pen_.widthF(), -u + pen_.widthF());
     QPointF beginPoint =
-        mid(trace[trace.length() - 2], trace[trace.length() - 3]) + offset;
+        mid(trace[trace.length() - 2], trace[trace.length() - 3]);
     QLineF lastLine = QLineF(trace[trace.length() - 2], trace.back());
-    lastLine.translate(offset);
-    path.translate(offset);
-    wb->addControl(new WbControlFreePen(wb, pen_,Qt::NoBrush,path, lastLine, beginPoint,  QPointF(l - pen_.widthF(), u - pen_.widthF())));
+    std::shared_ptr<WbControlFreePen> __sp = std::shared_ptr<WbControlFreePen> (
+       new WbControlFreePen(wb, wb->pen, Qt::NoBrush, path, lastLine, beginPoint,
+                             QPointF(l - wb->pen.widthF(), u - wb->pen.widthF())));
+    wb->addControl(__sp);
     this->last = lastLine;
     this->begin = beginPoint;
 
     activated = false;
   }
   void onPaint(QPixmap &w) override {
-      if (!activated){
-          return;
-      }
-      QPainter painter(&w);
-      painter.setCompositionMode(QPainter::CompositionMode_Source);
-      painter.setRenderHint(QPainter::Antialiasing);
-      painter.setPen(pen_);
-      painter.setBrush(brush_);
-      painter.drawPath(path);
-      if (isDrawPatchPoint && last.length() >= 5) {
-        drawPatchPoint(&painter, last, begin, pen_);
-      }
-      painter.end();
+    if (!activated) {
+      return;
     }
+    QPainter painter(&w);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.drawPixmap(QPoint(0, 0), pm);
+    painter.end();
+  }
+};
+class WbTmpEraser: public WbTmp {
+private:
+  QList<QPointF> trace;
 
+  bool activated = false;
+  bool isDrawPatchPoint = false;
+  QPointF last;
 
+public:
+  WbTmpEraser(Whiteboard *wb) : WbTmp(wb) {
+    // fns.emplaceBack(WbFunction())
+  }
+  ~WbTmpEraser() {}
+  void onPress(const QPointF &p) override {
+      qDebug()<<"press\n";
+    trace.clear();
+    isDrawPatchPoint = false;
+    last = QPointF(0, 0);
+    activated = true;
+  }
 
+  void onMove(const QPointF &p) override {
+    if (!activated) {
+      return;
+    }
+    QLineF line (last, p);
+    for (int i = 0 ;i != wb->scenes.back().size(); ++i){
+        if ((wb->scenes.back()[i])->checkfn<bool(const QLineF&, double)>("isInteract")){
+            auto p = (wb->scenes.back()[i])->getfn<bool(const QLineF&, double)>("isInteract");
+            if (p.value()(line, wb->pen.widthF())){
+                qDebug()<<"HERE\n";
+
+    //         }
+            // if (.value()(line, wb->pen.widthF())){
+        //         qDebug()<<"del\n";
+        //         // wb->scenes.back().erase(i);
+            }
+        }
+
+    }
+    last = p;
+  }
+
+  void onRelease(const QPointF &p) override {
+    if (!activated) {
+      return;
+    }
+    activated = false;
+  }
+  void onPaint(QPixmap &w) override {
+      return;
+  }
 };
 
 #endif

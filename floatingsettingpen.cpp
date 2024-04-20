@@ -13,7 +13,8 @@ FloatingSettingPen::FloatingSettingPen(QWidget* parent, Whiteboard *wb)
 
 FloatingSettingPen::~FloatingSettingPen() { delete ui; }
 
-void FloatingSettingPen::on_colorRed_pressed() { wb->pen.setColor(Qt::red); }
+void FloatingSettingPen::on_colorRed_pressed() {
+        wb->pen.setColor(Qt::red); }
 
 void FloatingSettingPen::on_colorBlue_pressed() { wb->pen.setColor(Qt::blue); }
 

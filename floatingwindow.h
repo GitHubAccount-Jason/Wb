@@ -17,14 +17,12 @@ public:
     ~FloatingWindow();
     FloatingSetting* fs;
     void setTransparent(){
-        setParent(nullptr);
-  setWindowFlag(Qt::SubWindow);
-  setWindowFlag(Qt::WindowStaysOnTopHint);
+        setParent(nullptr, windowFlags());
         show();
         fs->setTransparent();
     }
     void setUntransparent(){
-        setParent(wb);
+        setParent(wb,windowFlags());
         show();
         fs->setUntransparent();
     }

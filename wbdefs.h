@@ -44,13 +44,12 @@ inline void drawPatchPoint(QPainter *painter, const QLineF &path,
   QPainterPath p;
   p.moveTo(beginPoint);
   p.quadTo(path.p1(), path.p2());
-  for (double i = 0; i < path.length(); i += 1) {
+  for (double i = 0; i <p.length(); i += 1) {
     k++;
-
     painter->setPen(QPen(pen.color(),
-                         pen.widthF() - temp * (k / path.length() * 100),
+                         pen.widthF() - temp * (k / p.length() * 100),
                          pen.style(), pen.capStyle(), pen.joinStyle()));
-    painter->drawPoint(p.pointAtPercent(i / path.length()));
+    painter->drawPoint(p.pointAtPercent(i / p.length()));
   }
 }
 inline double disPoints(const QPointF &p1, const QPointF &p2) {
@@ -101,10 +100,16 @@ private:
     QString name;
     std::any function;
     int typeIndex_=0;
+    WbFunction(){};
 public:
-    WbFunction(){}
     template<class A>
-    WbFunction(const QString&name, const std::function<A>& function):name(name), function(function), typeIndex_(TypeIndexer<A>::index){}
+    static WbFunction make(const QString&name, const std::function<A>& function){
+        WbFunction r;
+        r.function = function;
+        r.typeIndex_ = TypeIndexer<A>::index;
+        r.name = name;
+        return r;
+    }
     int typeIndex()const{return typeIndex_;}
     template<class A>
     bool check(const QString& name)const{
@@ -124,14 +129,14 @@ public:
     virtual void onPaint(QPixmap&w)=0;
     virtual ~WbControl(){}
     template<class A>
-    bool checkFn(const QString&name){
+    bool checkfn(const QString&name){
         for (const auto& i:fns){
             if (i.check<A>(name)){return true;}
         }
         return false;
     }
     template<class A>
-    std::optional<std::function<A>> getFn(const QString&s){
+    std::optional<std::function<A>> getfn(const QString&s){
         for (const auto& i:fns){
             if (i.get<A>(s).has_value()){return i.get<A>(s).value();}
         }
@@ -141,11 +146,14 @@ protected:
     QList<WbFunction> fns;
     QPen pen_;
     QBrush brush_;
+    void registfn( const WbFunction& fn){
+        fns.emplaceBack(fn);
+    }
 
 };
 class WbTmp{
 public:
-    WbTmp(Whiteboard*wb, const QPen&pen, const QBrush&brush):wb(wb), pen_(pen), brush_(brush){}
+    WbTmp(Whiteboard*wb):wb(wb){}
     virtual ~WbTmp(){}
     virtual void onPress(const QPointF& p)=0;
     virtual void onMove(const QPointF&p)=0;
@@ -153,12 +161,11 @@ public:
     virtual void onPaint(QPixmap&w)=0;
 protected:
  Whiteboard *wb;
-    QPen pen_;
-    QBrush brush_;
 };
 
 // 自由画笔临时控件
 class WbTmpFreePen;
 // 自由画笔控件
 class WbControlFreePen;
+class WbTmpEraser;
 #endif // WBDEFS_H
