@@ -70,6 +70,60 @@ inline double disPointLine(const QPointF &p1, const QLineF &l1) {
 inline double disLineCircle(const QLineF &l, const Circle &c) {
   return disPointLine(c.o, l) - c.r;
 }
+inline double disPointSeg(const QPointF& A,const QLineF &line) {
+    double a = disPoints(A, line.p1());
+    double b =disPoints(A, line.p2());
+    double c =disPoints(line.p1(), line.p2());
+    if (a*a > b*b + c*c)
+        return b;
+    if (b*b > a*a + c*c)
+        return a;
+    double l = (a+b+c) / 2;
+    double s = sqrt(l*(l-a)*(l-b)*(l-c));
+    return 2*s/c;
+}
+inline bool isLineIntersectRect(const QLineF&line,
+                                     QRectF rect)
+    {
+        float lineHeight = line.y1() - line.y2();
+        float lineWidth = line.x2() - line.x1();  // 计算叉乘
+        float c = line.x1() * line.y2() - line.x2() * line.y1();
+        if ((lineHeight * rect.topLeft().x() + lineWidth * rect.topLeft().y() + c >= 0 && lineHeight * rect.bottomRight().x() + lineWidth * rect.bottomRight().y() + c <= 0)
+            || (lineHeight * rect.topLeft().x() + lineWidth * rect.topLeft().y() + c <= 0 && lineHeight * rect.bottomRight().x() + lineWidth * rect.bottomRight().y() + c >= 0)
+            || (lineHeight * rect.topLeft().x() + lineWidth * rect.bottomRight().y() + c >= 0 && lineHeight * rect.bottomRight().x() + lineWidth * rect.topLeft().y() + c <= 0)
+            || (lineHeight * rect.topLeft().x() + lineWidth * rect.bottomRight().y() + c <= 0 && lineHeight * rect.bottomRight().x() + lineWidth * rect.topLeft().y() + c >= 0))
+        {
+
+            if (rect.topLeft().x() > rect.bottomRight().x())
+            {
+                float temp = rect.topLeft().x();
+                rect.topLeft().setX(rect.bottomRight().x());
+                rect.bottomRight().setX( temp);
+            }
+            if (rect.topLeft().y() < rect.bottomRight().y())
+            {
+                float temp1 = rect.topLeft().y();
+                rect.topLeft().setY(  rect.bottomRight().y());
+                rect.bottomRight().setY(temp1);
+            }
+            if ((line.x1() < rect.topLeft().x() && line.x2() < rect.topLeft().x())
+                || (line.x1() > rect.bottomRight().x() && line.x2() > rect.bottomRight().x())
+                || (line.y1() > rect.topLeft().y() && line.y2() > rect.topLeft().y())
+                || (line.y1() < rect.bottomRight().y() && line.y2() < rect.bottomRight().y()))
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+        else
+        {
+            return false;
+        }
+
+    }
 inline QPointF mapToRect(const QPointF &p, const QRect &r, qreal w) {
   return QPointF(p.x() - r.left() + w, p.y() - r.top() + w);
 }

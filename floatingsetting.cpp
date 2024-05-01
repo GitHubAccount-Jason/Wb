@@ -26,6 +26,7 @@ void FloatingSetting::on_pbPen_pressed()
 {
     p->move(QPoint(pos()).x(), (pos()).y()-100);
     p->show();
+    wb->changeTmp<WbTmpFreePen>();
 }
 
 void FloatingSetting::moveEvent(QMoveEvent *ev){

@@ -57,24 +57,42 @@ public:
     }
     interactpath = path;
     interactpath.quadTo(begin, last.center());
-    registfn(WbFunction::make<bool(const QLineF&, double)>("isInteract", [this](const  QLineF&p, double w)->bool {
-        if (this->usePm){
+    registfn(WbFunction::make<bool(const QLineF &, double)>(
+        "isInteract", [this](const QLineF &p, double w) -> bool {
+          if (this->usePm) {
+            QLineF real = p.translated(-this->p);
+              if (!pm.rect().translated(this->p.toPoint()).intersects(QRectF(real.p1(), real.p2()).toRect())){
+                  return false;
+              }
 
-        QPainterPath p_;
-        p_.moveTo(p.p1()-this->p);
-        p_.lineTo(p.p2()-this->p);
+            if (!isLineIntersectRect(real, pm.rect())) {
+              return false;
+            }
 
-        for (int i = 0; i != this->path.elementCount(); ++i){
-        }
-        return this->path.intersects(p_);
-        }else{
-        QPainterPath p_;
-        p_.moveTo(p.p1());
-        p_.lineTo(p.p2());
-        return this->path.intersects(p_);
+            for (int i = 0; i <= this->path.length(); ++i) {
+              if (disPointSeg(
+                      this->path.pointAtPercent((qreal)i / this->path.length()),
+                      real) <= w) {
+                    qDebug()<<"del";
+                return true;
+              }
+            }
+            return false;
 
-
-         }}));
+          } else {
+              if (!this->path.intersects(QRectF(p.p1(), p.p2()).toRect())){
+                  return false;
+              }
+            for (int i = 0; i <= this->path.length(); ++i) {
+              if (disPointSeg(
+                      this->path.pointAtPercent((qreal)i / this->path.length()),
+                      p) <= w) {
+                return true;
+              }
+            }
+            return false;
+          }
+        }));
 
     // fns.emplaceBack(WbFunction())
   }
@@ -182,9 +200,10 @@ public:
     QPointF beginPoint =
         mid(trace[trace.length() - 2], trace[trace.length() - 3]);
     QLineF lastLine = QLineF(trace[trace.length() - 2], trace.back());
-    std::shared_ptr<WbControlFreePen> __sp = std::shared_ptr<WbControlFreePen> (
-       new WbControlFreePen(wb, wb->pen, Qt::NoBrush, path, lastLine, beginPoint,
-                             QPointF(l - wb->pen.widthF(), u - wb->pen.widthF())));
+    std::shared_ptr<WbControlFreePen> __sp =
+        std::shared_ptr<WbControlFreePen>(new WbControlFreePen(
+            wb, wb->pen, Qt::NoBrush, path, lastLine, beginPoint,
+            QPointF(l - wb->pen.widthF(), u - wb->pen.widthF())));
     wb->addControl(__sp);
     this->last = lastLine;
     this->begin = beginPoint;
@@ -201,12 +220,13 @@ public:
     painter.end();
   }
 };
-class WbTmpEraser: public WbTmp {
+class WbTmpEraser : public WbTmp {
 private:
   QList<QPointF> trace;
 
   bool activated = false;
   bool isDrawPatchPoint = false;
+  bool _2move=false;
   QPointF last;
 
 public:
@@ -215,33 +235,37 @@ public:
   }
   ~WbTmpEraser() {}
   void onPress(const QPointF &p) override {
-      qDebug()<<"press\n";
+    qDebug() << "press\n";
     trace.clear();
     isDrawPatchPoint = false;
     last = QPointF(0, 0);
     activated = true;
+    _2move=false;
   }
 
   void onMove(const QPointF &p) override {
     if (!activated) {
       return;
     }
-    QLineF line (last, p);
-    for (int i = 0 ;i != wb->scenes.back().size(); ++i){
-        if ((wb->scenes.back()[i])->checkfn<bool(const QLineF&, double)>("isInteract")){
-            auto p = (wb->scenes.back()[i])->getfn<bool(const QLineF&, double)>("isInteract");
-            if (p.value()(line, wb->pen.widthF())){
-                qDebug()<<"HERE\n";
-
-    //         }
-            // if (.value()(line, wb->pen.widthF())){
-        //         qDebug()<<"del\n";
-        //         // wb->scenes.back().erase(i);
-            }
+    if (_2move){
+    QLineF line(last, p);
+    for (int i = 0; i != wb->scenes.back().size(); ++i) {
+      if ((wb->scenes.back()[i])
+              ->checkfn<bool(const QLineF &, double)>("isInteract")) {
+        auto p = (wb->scenes.back()[i])
+                     ->getfn<bool(const QLineF &, double)>("isInteract");
+        if (p.value()(line, wb->pen.widthF())) {
+          wb->store();
+          wb->scenes.back().erase(wb->scenes.back().begin() + i);
+          --i;
+          wb->flush();
+          wb->update();
         }
-
+      }
+    }
     }
     last = p;
+    _2move=true;
   }
 
   void onRelease(const QPointF &p) override {
@@ -250,9 +274,7 @@ public:
     }
     activated = false;
   }
-  void onPaint(QPixmap &w) override {
-      return;
-  }
+  void onPaint(QPixmap &w) override { return; }
 };
 
 #endif

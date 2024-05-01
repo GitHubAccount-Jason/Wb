@@ -44,18 +44,8 @@ void Whiteboard::paintEvent(QPaintEvent *ev) { /*{{{*/
 
 } /*}}}*/
 void Whiteboard::addControl(const std::shared_ptr<WbControl> &c) {
-  if (scenes.length() != 0) {
-    scenes.erase(scenes.begin() + nextScenePos, scenes.end());
-  }
-  if (scenes.size() == 0) {
-    scenes.emplaceBack();
+    store();
     scenes.back().emplaceBack(c);
-  } else {
-    scenes.emplaceBack(scenes.back());
-    scenes.back().emplaceBack(c);
-    // c->onPaint(pm);
-  }
-  nextScenePos = scenes.length();
 }
 void Whiteboard::mousePressEvent(QMouseEvent *ev) { /*{{{*/
   if (evinfo.init(ev) == false) {

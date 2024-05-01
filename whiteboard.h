@@ -99,6 +99,18 @@ public:
       curTmp = new T(this);
 
   }
+  void store(){
+
+  if (scenes.length() != 0) {
+    scenes.erase(scenes.begin() + nextScenePos, scenes.end());
+  }
+  if (scenes.size() == 0) {
+    scenes.emplaceBack();
+  } else {
+    scenes.emplaceBack(scenes.back());
+  }
+  nextScenePos = scenes.length();
+  }
   protected:
   virtual void paintEvent(QPaintEvent *ev) override;
   virtual void mousePressEvent(QMouseEvent *ev) override;
